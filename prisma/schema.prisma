@@ -1,0 +1,549 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id          String      @id @default(cuid())
+  key         String @unique
+  name        String
+  description String?
+  users       User[]
+  permissions Permission[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  label       String
+  module      String
+  description String?
+  roles       Role[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([module])
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  phone         String?
+  googleSubject String?
+  passwordHash  String
+  roleId        String
+  role          Role      @relation(fields: [roleId], references: [id])
+  active        Boolean   @default(true)
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  invoices      Invoice[] @relation("InvoiceCashier")
+  payments      Payment[] @relation("PaymentCreator")
+  auditLogs     AuditLog[]
+  reportExports ReportExportLog[]
+  stockMoves    StockMovement[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@index([roleId])
+  @@index([active])
+  @@index([email])
+  @@index([googleSubject])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([usedAt])
+}
+
+model BusinessSettings {
+  id                  String   @id @default(cuid())
+  businessName        String   @default("Namdhari Swaich Sweets")
+  logoUrl             String?
+  address             String   @default("")
+  phone               String   @default("")
+  whatsappNumber      String?
+  email               String?
+  gstin               String?
+  fssaiLicense        String?
+  registeredNumber    String?
+  invoicePrefix       String   @default("NSS")
+  invoiceFooterTerms  String   @default("Thank you for your business.")
+  invoiceAssignees    String?
+  upiPaymentDetails   String?
+  currency            String   @default("INR")
+  taxInclusive        Boolean  @default(false)
+  defaultTaxRate      Decimal  @default(0)
+  themeColor          String   @default("#141b18")
+  branchName          String?
+  branchCode          String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Product {
+  id                 String        @id @default(cuid())
+  name               String
+  category           String
+  sku                String        @unique
+  unit               String
+  sellingPrice       Decimal
+  costPrice          Decimal       @default(0)
+  taxRate            Decimal       @default(0)
+  imageUrl           String?
+  active             Boolean       @default(true)
+  wholesalePrice     Decimal?
+  festivalPrice      Decimal?
+  lowStockThreshold  Decimal?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  invoiceItems       InvoiceItem[]
+  inventoryItems     InventoryItem[]
+
+  @@index([name])
+  @@index([category])
+  @@index([sku])
+  @@index([active])
+}
+
+model Customer {
+  id             String        @id @default(cuid())
+  name           String
+  phone          String
+  address        String?
+  email          String?
+  notes          String?
+  openingBalance Decimal       @default(0)
+  active         Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  invoices       Invoice[]
+  payments       Payment[]
+  ledgerEntries  LedgerEntry[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([active])
+}
+
+model Supplier {
+  id             String          @id @default(cuid())
+  name           String
+  contactPerson  String?
+  phone          String
+  alternatePhone String?
+  whatsappNumber String?
+  address        String?
+  email          String?
+  gstOrLicense   String?
+  supplyCategories String?
+  paymentTerms   String?
+  bankDetails    String?
+  notes          String?
+  openingBalance Decimal         @default(0)
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  payments       Payment[]
+  ledgerEntries  LedgerEntry[]
+  inventoryItems InventoryItem[]
+  stockMoves     StockMovement[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([active])
+}
+
+model Farmer {
+  id             String           @id @default(cuid())
+  name           String
+  phone          String
+  villageAddress String?
+  paymentDetails String?
+  notes          String?
+  openingBalance Decimal          @default(0)
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  milkCollections MilkCollection[]
+  payments       Payment[]
+  ledgerEntries  LedgerEntry[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([active])
+}
+
+model Invoice {
+  id            String         @id @default(cuid())
+  invoiceNumber String         @unique
+  shareToken    String?
+  customerId    String?
+  customer      Customer?      @relation(fields: [customerId], references: [id])
+  issueDate     DateTime       @default(now())
+  subtotal      Decimal        @default(0)
+  discountTotal Decimal        @default(0)
+  taxTotal      Decimal        @default(0)
+  total         Decimal        @default(0)
+  paidAmount    Decimal        @default(0)
+  dueAmount     Decimal        @default(0)
+  paymentMode   String    @default("CASH")
+  status        String  @default("UNPAID")
+  notes         String?
+  cancelReason  String?
+  cancelledAt   DateTime?
+  assignedToName String?
+  cashierId     String?
+  cashier       User?          @relation("InvoiceCashier", fields: [cashierId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  items         InvoiceItem[]
+  payments      Payment[]
+  ledgerEntries LedgerEntry[]
+
+  @@index([invoiceNumber])
+  @@index([shareToken])
+  @@index([customerId])
+  @@index([issueDate])
+  @@index([status])
+  @@index([paymentMode])
+}
+
+model InvoiceItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  productId   String?
+  product     Product? @relation(fields: [productId], references: [id])
+  productName String
+  quantity    Decimal
+  unit        String
+  price       Decimal
+  discount    Decimal  @default(0)
+  taxRate     Decimal  @default(0)
+  taxAmount   Decimal  @default(0)
+  lineTotal   Decimal
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([invoiceId])
+  @@index([productId])
+}
+
+model Payment {
+  id              String           @id @default(cuid())
+  paymentFor      String
+  direction       String
+  mode            String
+  amount          Decimal
+  paymentDate     DateTime         @default(now())
+  referenceNumber String?
+  notes           String?
+  customerId      String?
+  customer        Customer?        @relation(fields: [customerId], references: [id])
+  farmerId        String?
+  farmer          Farmer?          @relation(fields: [farmerId], references: [id])
+  supplierId      String?
+  supplier        Supplier?        @relation(fields: [supplierId], references: [id])
+  employeeId      String?
+  employee        Employee?        @relation(fields: [employeeId], references: [id])
+  expenseId       String?
+  expense         Expense?         @relation(fields: [expenseId], references: [id])
+  invoiceId       String?
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
+  createdById     String?
+  createdBy       User?            @relation("PaymentCreator", fields: [createdById], references: [id])
+  ledgerEntries   LedgerEntry[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([paymentFor])
+  @@index([direction])
+  @@index([mode])
+  @@index([paymentDate])
+  @@index([customerId])
+  @@index([farmerId])
+  @@index([supplierId])
+  @@index([employeeId])
+  @@index([invoiceId])
+}
+
+model LedgerEntry {
+  id               String          @id @default(cuid())
+  ownerType        String
+  entryType        String
+  amount           Decimal
+  entryDate        DateTime        @default(now())
+  description      String
+  customerId       String?
+  customer         Customer?       @relation(fields: [customerId], references: [id])
+  farmerId         String?
+  farmer           Farmer?         @relation(fields: [farmerId], references: [id])
+  supplierId       String?
+  supplier         Supplier?       @relation(fields: [supplierId], references: [id])
+  invoiceId        String?
+  invoice          Invoice?        @relation(fields: [invoiceId], references: [id])
+  paymentId        String?
+  payment          Payment?        @relation(fields: [paymentId], references: [id])
+  milkCollectionId String?
+  milkCollection   MilkCollection? @relation(fields: [milkCollectionId], references: [id])
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([ownerType])
+  @@index([entryType])
+  @@index([entryDate])
+  @@index([customerId])
+  @@index([farmerId])
+  @@index([supplierId])
+}
+
+model InventoryItem {
+  id              String            @id @default(cuid())
+  name            String
+  type            String
+  unit            String
+  currentQuantity Decimal           @default(0)
+  minimumQuantity Decimal           @default(0)
+  costPerUnit     Decimal           @default(0)
+  supplierId      String?
+  supplier        Supplier?         @relation(fields: [supplierId], references: [id])
+  productId       String?
+  product         Product?          @relation(fields: [productId], references: [id])
+  batchNumber     String?
+  expiryDate      DateTime?
+  notes           String?
+  active          Boolean           @default(true)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  movements       StockMovement[]
+
+  @@index([name])
+  @@index([type])
+  @@index([supplierId])
+  @@index([productId])
+  @@index([active])
+}
+
+model StockMovement {
+  id               String            @id @default(cuid())
+  inventoryItemId  String
+  inventoryItem    InventoryItem     @relation(fields: [inventoryItemId], references: [id])
+  movementType     String
+  quantity         Decimal
+  unitCost         Decimal           @default(0)
+  totalCost        Decimal           @default(0)
+  supplierId       String?
+  supplier         Supplier?         @relation(fields: [supplierId], references: [id])
+  milkCollectionId String?
+  milkCollection   MilkCollection?   @relation(fields: [milkCollectionId], references: [id])
+  movementDate     DateTime          @default(now())
+  notes            String?
+  createdById      String?
+  createdBy        User?             @relation(fields: [createdById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([inventoryItemId])
+  @@index([movementType])
+  @@index([movementDate])
+  @@index([supplierId])
+}
+
+model MilkCollection {
+  id             String          @id @default(cuid())
+  farmerId       String
+  farmer         Farmer          @relation(fields: [farmerId], references: [id])
+  collectionDate DateTime        @default(now())
+  session        String
+  quantityLitres Decimal
+  fat            Decimal?
+  snf            Decimal?
+  ratePerLitre   Decimal
+  totalAmount    Decimal
+  paidAmount     Decimal         @default(0)
+  dueAmount      Decimal         @default(0)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ledgerEntries  LedgerEntry[]
+  stockMovements StockMovement[]
+
+  @@index([farmerId])
+  @@index([collectionDate])
+  @@index([session])
+}
+
+model Employee {
+  id             String          @id @default(cuid())
+  name           String
+  phone          String
+  aadhaarNumber  String          @default("")
+  address        String?
+  designation    String
+  joiningDate    DateTime
+  salaryType     String
+  salaryRate     Decimal
+  active         Boolean         @default(true)
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  attendance     Attendance[]
+  salaryPayments SalaryPayment[]
+  payments       Payment[]
+
+  @@index([name])
+  @@index([phone])
+  @@index([aadhaarNumber])
+  @@index([designation])
+  @@index([active])
+}
+
+model Attendance {
+  id           String           @id @default(cuid())
+  employeeId   String
+  employee     Employee         @relation(fields: [employeeId], references: [id])
+  date         DateTime
+  status       String
+  hoursWorked  Decimal?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([employeeId, date])
+  @@index([date])
+  @@index([status])
+}
+
+model SalaryPayment {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  salaryMonth    DateTime
+  baseSalary     Decimal
+  advance        Decimal  @default(0)
+  bonus          Decimal  @default(0)
+  deduction      Decimal  @default(0)
+  finalPayable   Decimal
+  paidAmount     Decimal  @default(0)
+  pendingAmount  Decimal  @default(0)
+  paymentDate    DateTime?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId])
+  @@index([salaryMonth])
+  @@index([paymentDate])
+}
+
+model Expense {
+  id              String    @id @default(cuid())
+  category        String
+  amount          Decimal
+  paymentMode     String
+  expenseDate     DateTime  @default(now())
+  notes           String?
+  receiptUrl      String?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  payments        Payment[]
+
+  @@index([category])
+  @@index([expenseDate])
+  @@index([paymentMode])
+  @@index([deletedAt])
+}
+
+model BulkOrder {
+  id              String          @id @default(cuid())
+  customerName    String
+  phone           String
+  occasion        String?
+  deliveryDate    DateTime
+  deliveryTime    String?
+  itemsSummary    String
+  quantitySummary String?
+  estimatedTotal  Decimal         @default(0)
+  advancePaid     Decimal         @default(0)
+  balanceDue      Decimal         @default(0)
+  status          String @default("ENQUIRY")
+  assignedToName  String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([customerName])
+  @@index([phone])
+  @@index([deliveryDate])
+  @@index([status])
+}
+
+model HolidayPlan {
+  id              String   @id @default(cuid())
+  name            String
+  eventDate       DateTime
+  category        String?
+  demandNotes     String?
+  productionNotes String?
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([name])
+  @@index([eventDate])
+  @@index([active])
+}
+
+model ReportExportLog {
+  id          String       @id @default(cuid())
+  reportKey   String
+  reportTitle String
+  format      String
+  filters     String?
+  generatedById String?
+  generatedBy   User?     @relation(fields: [generatedById], references: [id])
+  createdAt   DateTime    @default(now())
+
+  @@index([reportKey])
+  @@index([format])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id])
+  module      String
+  action      String
+  recordId    String?
+  recordTitle String?
+  oldValues   String?
+  newValues   String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@index([module])
+  @@index([action])
+  @@index([recordId])
+  @@index([createdAt])
+}
+
