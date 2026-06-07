@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Namdhari Swaich Sweets">
+  <rect width="512" height="512" rx="96" fill="#141b18"/>
+  <circle cx="256" cy="246" r="142" fill="#f5bf3f"/>
+  <circle cx="206" cy="214" r="38" fill="#fffaf0"/>
+  <circle cx="306" cy="214" r="38" fill="#fffaf0"/>
+  <path d="M160 300c44 54 148 54 192 0" fill="none" stroke="#fffaf0" stroke-width="32" stroke-linecap="round"/>
+  <path d="M120 392h272" stroke="#fffaf0" stroke-width="30" stroke-linecap="round"/>
+</svg>
